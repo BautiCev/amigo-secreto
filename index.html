@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Amigo secreto 🎁</title>
+<style>
+:root{--bg:#fbf6f0;--card:#fff;--ink:#2b2420;--mute:#7a6c62;--acc:#c0392b;--acc2:#1e7a4f;--line:#e8ddd2}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1714;--card:#262019;--ink:#f3ebe3;--mute:#a89a8d;--acc:#e5604f;--acc2:#4fbf8a;--line:#3a322b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+main{max-width:520px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:28px;margin:0 0 4px;text-align:center}
+.sub{color:var(--mute);text-align:center;margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+h2{font-size:16px;margin:0 0 10px}
+textarea{width:100%;min-height:150px;padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:var(--bg);color:var(--ink);margin-bottom:10px;resize:vertical}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:12px 16px;background:var(--acc);color:#fff;cursor:pointer;width:100%}
+button.sec{background:transparent;color:var(--mute);border:1px solid var(--line);font-weight:500}
+button.small{width:auto;padding:6px 12px;font-size:14px}
+button:disabled{opacity:.5}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.btns{display:flex;gap:6px}
+.big{font-size:34px;text-align:center;font-weight:800;color:var(--acc);padding:18px 0;word-break:break-word}
+.note{color:var(--mute);font-size:14px;margin:8px 0 0}
+.err{color:var(--acc);font-size:14px;margin:0 0 10px}
+.gap{height:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>🎁 Amigo secreto</h1>
+  <p class="sub">Navidad en familia</p>
+  <div id="app"></div>
+</main>
+<script>
+(function(){
+  var app=document.getElementById('app');
+  var shown=false, err='', links=null, namesText='';
+
+  function h(tag,props,kids){
+    var e=document.createElement(tag);
+    for(var k in (props||{})){
+      if(k==='text')e.textContent=props[k];
+      else if(k.indexOf('on')===0)e.addEventListener(k.slice(2),props[k]);
+      else e.setAttribute(k,props[k]);
+    }
+    (kids||[]).forEach(function(c){ if(c)e.appendChild(c); });
+    return e;
+  }
+  function card(title,kids){
+    var c=h('div',{'class':'card'},[]);
+    if(title)c.appendChild(h('h2',{text:title}));
+    kids.forEach(function(k){ if(k)c.appendChild(k); });
+    return c;
+  }
+  function p(t,cls){ return h('p',{'class':cls||'note',text:t}); }
+
+  function enc(obj){
+    var s=btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+    return s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function dec(s){
+    s=s.replace(/-/g,'+').replace(/_/g,'/');
+    while(s.length%4)s+='=';
+    return JSON.parse(decodeURIComponent(escape(atob(s))));
+  }
+  function baseUrl(){ return location.href.split('#')[0]; }
+
+  function shuffle(a){
+    for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+
+  function sortear(){
+    var raw=namesText.split('\n').map(function(x){return x.trim();}).filter(Boolean);
+    var seen={}, names=[];
+    raw.forEach(function(n){ var k=n.toLowerCase(); if(!seen[k]){seen[k]=1;names.push(n);} });
+    if(names.length<3){ err='Hacen falta al menos 3 nombres distintos.'; links=null; render(); return; }
+    err='';
+    shuffle(names);
+    links=names.map(function(n,i){
+      var r=names[(i+1)%names.length];
+      return {name:n,url:baseUrl()+'#'+enc({n:n,r:r})};
+    }).sort(function(a,b){return a.name.localeCompare(b.name);});
+    render();
+  }
+
+  function copy(text,btn){
+    function ok(){ var o=btn.textContent; btn.textContent='¡Copiado!'; setTimeout(function(){btn.textContent=o;},1500); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,function(){ window.prompt('Copiá el link:',text); }); }
+    else window.prompt('Copiá el link:',text);
+  }
+
+  function renderViewer(data){
+    app.textContent='';
+    var kids=[];
+    if(!shown){
+      kids.push(p('Hola '+data.n+'. Asegurate de que nadie esté mirando tu pantalla.',''));
+      kids.push(h('div',{'class':'gap'}));
+      kids.push(h('button',{text:'Ver a quién me tocó',onclick:function(){shown=true;renderViewer(data);}}));
+    }else{
+      kids.push(p('Tu amigo secreto es:',''));
+      kids.push(h('div',{'class':'big',text:data.r}));
+      kids.push(h('button',{'class':'sec',text:'Ocultar',onclick:function(){shown=false;renderViewer(data);}}));
+    }
+    app.appendChild(card('🎄 Tu sorteo',kids));
+    app.appendChild(p('Guardá este link por si querés volver a verlo. No lo compartas con nadie.'));
+  }
+
+  function renderOrganizer(){
+    app.textContent='';
+    var ta=h('textarea',{placeholder:'Un nombre por línea\nAna\nLuis\nMartina'});
+    ta.value=namesText;
+    ta.addEventListener('input',function(){namesText=ta.value;});
+    var kids=[ta];
+    if(err)kids.push(h('p',{'class':'err',text:err}));
+    kids.push(h('button',{text:links?'Sortear de nuevo':'Hacer el sorteo',onclick:sortear}));
+    kids.push(p('Pegá los nombres de todos los participantes (incluido vos). Al sortear se generan los links personales.'));
+    app.appendChild(card('Participantes',kids));
+
+    if(links){
+      var rows=links.map(function(l){
+        var cb=h('button',{'class':'sec small',text:'Copiar link'});
+        cb.addEventListener('click',function(){copy(l.url,cb);});
+        var wa=h('button',{'class':'small',text:'WhatsApp'});
+        wa.addEventListener('click',function(){
+          var msg='Hola '+l.name+'! Este es tu link del amigo secreto 🎁 (no lo compartas): '+l.url;
+          window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+        });
+        return h('div',{'class':'row'},[h('span',{text:l.name}),h('div',{'class':'btns'},[cb,wa])]);
+      });
+      rows.push(p('Mandale a cada persona SOLO su link. Los links contienen el resultado, así que no los abras vos si querés mantener la sorpresa. Si volvés a sortear, los links anteriores dejan de valer.'));
+      app.appendChild(card('Links personales',rows));
+    }
+  }
+
+  function render(){
+    var hash=location.hash.slice(1);
+    if(hash){
+      try{
+        var d=dec(hash);
+        if(d&&d.n&&d.r){ renderViewer(d); return; }
+      }catch(e){}
+      app.textContent='';
+      app.appendChild(card('Link inválido',[p('Este link no se pudo leer. Pedile al organizador que te lo reenvíe.','')]));
+      return;
+    }
+    renderOrganizer();
+  }
+
+  window.addEventListener('hashchange',function(){ shown=false; render(); });
+  render();
+})();
+</script>
+</body>
+</html>
